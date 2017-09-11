@@ -45,20 +45,20 @@ __attribute__((destructor)) void queryResourcePreloadExit(void);
 
 #define NVQR_QUEUE_MAX 8
 
-/* XXX GL_NVX_query_resource defines - these should be removed once the
- * extension has been finalized and promoted to GL_NV_query_resource, and
- * these values become part of real OpenGL header files. */
-#ifndef GL_NVX_query_resource
-#define GL_NVX_query_resource 1
+/* XXX GL_NV_query_resource defines - these should be removed once the
+ * extension has been finalized and these values become part of real 
+ * OpenGL header files. */
+#ifndef GL_NV_query_resource
+#define GL_NV_query_resource 1
 
 #ifdef GL_GLEXT_PROTOTYPES
-GLAPI GLint GLAPIENTRY glQueryResourceNVX (GLenum queryType, GLuint pname, GLuint bufSize, GLint *buffer);
+GLAPI GLint GLAPIENTRY glQueryResourceNV (GLenum queryType, GLuint pname, GLuint bufSize, GLint *buffer);
 #endif /* GL_GLEXT_PROTOTYPES */
-typedef GLint (GLAPIENTRYP PFNGLQUERYRESOURCENVXPROC) (GLenum queryType, GLuint pname, GLuint bufSize, GLint *buffer);
+typedef GLint (GLAPIENTRYP PFNGLQUERYRESOURCENVPROC) (GLenum queryType, GLuint pname, GLuint bufSize, GLint *buffer);
 
 #endif
 
-#define NVQR_EXTENSION ((const GLubyte *)"glQueryResourceNVX")
+#define NVQR_EXTENSION ((const GLubyte *)"glQueryResourceNV")
 
 #define SOCKET_NAME_MAX_LENGTH sizeof(((struct sockaddr_un *)0)->sun_path)
 static char socket_name[SOCKET_NAME_MAX_LENGTH];
@@ -71,7 +71,7 @@ static pthread_mutex_t connect_lock;
 // current to the thread that is making the query
 static pthread_mutex_t query_lock;
 
-static PFNGLQUERYRESOURCENVXPROC glQueryResourceNVX = NULL;
+static PFNGLQUERYRESOURCENVPROC glQueryResourceNV = NULL;
 
 static Display *dpy = NULL;
 static GLXContext ctx = NULL;
@@ -208,10 +208,7 @@ static int do_query(GLenum queryType, size_t len, int *data)
     pthread_mutex_lock(&query_lock);
 
     if (glXMakeCurrent(dpy, None, ctx)) {
-        // glQueryResourceNVX() is part of an experimental OpenGL extension
-        // whose details are subject to change. Be prepared to update any
-        // code that uses this API for compatibility with future GL drivers.
-        ret = glQueryResourceNVX(queryType, 0, len, data);
+        ret = glQueryResourceNV(queryType, -1, len, data);
         if (!glXMakeCurrent(dpy, None, NULL)) {
             ret = 0;
         }
@@ -341,10 +338,10 @@ __attribute__((constructor)) void queryResourcePreloadInit(void)
 
     pthread_mutex_init(&connect_lock, NULL);
 
-    glQueryResourceNVX =
-        (PFNGLQUERYRESOURCENVXPROC) glXGetProcAddressARB(NVQR_EXTENSION);
+    glQueryResourceNV =
+        (PFNGLQUERYRESOURCENVPROC) glXGetProcAddressARB(NVQR_EXTENSION);
 
-    if (glQueryResourceNVX == NULL) {
+    if (glQueryResourceNV == NULL) {
         // XXX should check extension string once extension is exported there
         error_msg("failed to load %s", NVQR_EXTENSION);
         return;

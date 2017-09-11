@@ -53,7 +53,7 @@ typedef struct {
 
 //------------------------------------------------------------------------------
 // Open a connection to an OpenGL process. This process must be using an NVIDIA
-// driver that supports the GL_query_resource_NVX extension. On Unix, this
+// driver that supports the GL_query_resource_NV extension. On Unix, this
 // process must additionally have libnvidia-query-resource-opengl-preload.so
 // preloaded into it with LD_PRELOAD. The connection may be reused for any
 // number of query operations as long as it is left open; however, Windows only
@@ -67,25 +67,29 @@ nvqrReturn_t nvqr_connect(NVQRConnection *connection, pid_t pid);
 nvqrReturn_t nvqr_disconnect(NVQRConnection *connection);
 
 //------------------------------------------------------------------------------
-// Perform a glQueryResourceNVX() query in the remote OpenGL process. The
+// Perform a glQueryResourceNV() query in the remote OpenGL process. The
 // process must be in the connected state when performing the query.
 
 nvqrReturn_t nvqr_request_meminfo(NVQRConnection c, GLenum queryType,
                                   NVQRQueryDataBuffer *buf);
 
-/* XXX GL_NVX_query_resource defines - these should be removed once the
- * extension has been finalized and promoted to GL_NV_query_resource, and
- * these values become part of real OpenGL header files. */
-#ifndef GL_QUERY_RESOURCE_TYPE_SUMMARY_NVX
+//------------------------------------------------------------------------------
+// Decode and print out the dta buffer returned from glQueryResourceNV()
+// 
 
-#define GL_QUERY_RESOURCE_TYPE_SUMMARY_NVX                  0x9540
-#define GL_QUERY_RESOURCE_TYPE_DETAILED_NVX                 0x9541
-#define GL_QUERY_RESOURCE_MEMTYPE_VIDMEM_NVX                0x9542
-#define GL_QUERY_RESOURCE_MEMTYPE_SYSMEM_NVX                0x9543
-#define GL_QUERY_RESOURCE_SYS_RESERVED_NVX                  0x9544
-#define GL_QUERY_RESOURCE_TEXTURE_NVX                       0x9545
-#define GL_QUERY_RESOURCE_RENDERBUFFER_NVX                  0x9546
-#define GL_QUERY_RESOURCE_BUFFEROBJECT_NVX                  0x9547
+void nvqr_print_memory_info(GLenum queryType, NVQRQueryData_t *buffer);
+
+/* GL_NV_query_resource defines - these should be removed once the
+ * extension has been finalized and these values become part of real 
+ * OpenGL header files. */
+#ifndef GL_QUERY_RESOURCE_TYPE_VIDMEM_ALLOC_NV
+
+#define GL_QUERY_RESOURCE_TYPE_VIDMEM_ALLOC_NV              0x9540
+#define GL_QUERY_RESOURCE_MEMTYPE_VIDMEM_NV                 0x9542
+#define GL_QUERY_RESOURCE_SYS_RESERVED_NV                   0x9544
+#define GL_QUERY_RESOURCE_TEXTURE_NV                        0x9545
+#define GL_QUERY_RESOURCE_RENDERBUFFER_NV                   0x9546
+#define GL_QUERY_RESOURCE_BUFFEROBJECT_NV                   0x9547
 
 #endif
 

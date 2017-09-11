@@ -35,11 +35,10 @@
 static void print_help(const char *progname)
 {
     printf("Query OpenGL resource (vidmem and GPU-mapped sysmem) usage\n\n"
-           "Usage: %s -p pid [-qt query_type]\n"
+           "Usage: %s -p pid\n"
            "       %s -h\n\n"
            "  -h: print this help message\n"
-           "  -p <pid>: select process to query\n"
-           "  -qt (summary|detailed): select query type (default: summary)\n\n",
+           "  -p <pid>: select process to query\n",
            progname, progname);
 }
 
@@ -52,26 +51,13 @@ static nvqrReturn_t parse_commandline(int argc, char * const * const argv,
     int i;
 
     // default values
-    *queryType = GL_QUERY_RESOURCE_TYPE_SUMMARY_NVX;
-
+    *queryType = GL_QUERY_RESOURCE_TYPE_VIDMEM_ALLOC_NV;
 
     for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-h") == 0) {
             // help
             print_help(argv[0]);
             return NVQR_SUCCESS;
-        } else if (strcmp(argv[i], "-qt") == 0) {
-            // query type
-            i++;
-
-            if (strcmp(argv[i], "summary") == 0) {
-                *queryType = GL_QUERY_RESOURCE_TYPE_SUMMARY_NVX;
-            } else if (strcmp(argv[i], "detailed") == 0) {
-                *queryType = GL_QUERY_RESOURCE_TYPE_DETAILED_NVX;
-            } else {
-                print_help(argv[0]);
-                return NVQR_ERROR_INVALID_ARGUMENT;
-            }
         } else if (strcmp(argv[i], "-p") == 0) {
             // specific pid
             i++;
@@ -103,80 +89,10 @@ static nvqrReturn_t parse_commandline(int argc, char * const * const argv,
 }
 
 
-static void print_alloc_info(const char *type, int used, int free)
-{
-    printf("    %smem allocated = %d kiB (in use = %d kiB, free = %d kiB\n",
-           type, used + free, used, free);
-}
-
-
-static void print_detailed_infos(const NVQRQueryDeviceInfo* devInfo, int type)
-{
-    int i;
-
-    for (i = 0; i < devInfo->numDetailedBlocks; i++) {
-        if (type != devInfo->detailed[i].memType) {
-            continue;
-        }
-
-        printf("    %6d kiB ", devInfo->detailed[i].memUsedkiB);
-        switch (devInfo->detailed[i].objectType) {
-            case GL_QUERY_RESOURCE_SYS_RESERVED_NVX:
-                printf("SYSTEM RESERVED"); break;
-            case GL_QUERY_RESOURCE_TEXTURE_NVX:
-                printf("TEXTURE"); break;
-            case GL_QUERY_RESOURCE_RENDERBUFFER_NVX:
-                printf("RENDERBUFFER"); break;
-            case GL_QUERY_RESOURCE_BUFFEROBJECT_NVX:
-                printf("BUFFEROBJ_ARRAY"); break;
-            default:
-                printf("UNKNOWN ALLOCATION TYPE"); break;
-        } 
-        printf(", number of allocations = %d\n",
-               devInfo->detailed[i].numAllocs);
-    }
-}
-
-
-//------------------------------------------------------------------------------
-// print the memory info for a single device
-//
-static void print_device_info(GLenum queryType, NVQRQueryDeviceInfo *devInfo)
-{
-    printf("number of memory resource allocations = %d\n",
-           devInfo->summary.totalAllocs);
-
-    if (devInfo->summary.totalAllocs > 0) {
-        print_alloc_info("vid", devInfo->summary.vidMemUsedkiB,
-                         devInfo->summary.vidMemFreekiB);
-        if (queryType == GL_QUERY_RESOURCE_TYPE_DETAILED_NVX) {
-            print_detailed_infos(devInfo, GL_QUERY_RESOURCE_MEMTYPE_VIDMEM_NVX);
-        }
-        print_alloc_info("sys", devInfo->summary.sysMemUsedkiB,
-                         devInfo->summary.sysMemFreekiB);
-        if (queryType == GL_QUERY_RESOURCE_TYPE_DETAILED_NVX) {
-            print_detailed_infos(devInfo, GL_QUERY_RESOURCE_MEMTYPE_SYSMEM_NVX);
-        }
-    }
-}
-
-static void print_memory_info (GLenum queryType, NVQRQueryData_t *data)
-{
-    int num_devices = nvqr_get_num_devices(data);
-    int i;
-
-    for (i = 0; i < num_devices; i++) {
-        NVQRQueryDeviceInfo *device = nvqr_get_device(data, i);
-        printf("  Device %d: ", i);
-        print_device_info(queryType, device);
-        free(device);
-    }
-}
-
 int main (int argc, char * const * const argv)
 {
     NVQRConnection connection;
-    NVQRQueryDataBuffer data;
+    NVQRQueryDataBuffer buffer;
     pid_t pid = 0;
     GLenum queryType;
     nvqrReturn_t result;
@@ -200,22 +116,23 @@ int main (int argc, char * const * const argv)
         return result;
     }
 
-    result = nvqr_request_meminfo(connection, queryType, &data);
+    result = nvqr_request_meminfo(connection, queryType, &buffer);
     if (result == NVQR_SUCCESS) {
-        int version = nvqr_get_data_format_version(data.data);
-        if (version < NVQR_MIN_DATA_FORMAT_VERSION ||
-            version > NVQR_MAX_DATA_FORMAT_VERSION) {
+        NVQRQueryDataHeader *header = (NVQRQueryDataHeader *)&buffer.data;
+        if (header->version != NVQR_DATA_FORMAT_VERSION) {
             fprintf(stderr, "Error: unrecognized data format version '%d'. "
-                    "(Minimum supported: %d; Maximum supported: %d)\n", version,
-                    NVQR_MIN_DATA_FORMAT_VERSION, NVQR_MAX_DATA_FORMAT_VERSION);
+                    "(version supported: %d)\n", header->version,
+                    NVQR_DATA_FORMAT_VERSION);
+            result = nvqr_disconnect(&connection);
+            return result;
         }
 
         if (connection.process_name) {
             printf("%s, pid = %ld, data format version %d\n",
-                   connection.process_name, (long) connection.pid, version);
+                   connection.process_name, (long) connection.pid, header->version);
         }
 
-        print_memory_info(queryType, data.data);
+        nvqr_print_memory_info(queryType, buffer.data);
     } else {
         fprintf(stderr, "Error: failed to query resource usage information "
                 "for pid %ld.\n", (long) connection.pid);

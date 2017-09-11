@@ -6,7 +6,7 @@ About
 
 nvidia-query-resource-opengl queries the NVIDIA OpenGL driver to determine the
 OpenGL resource usage of an application. OpenGL applications may query their
-own resource usage using the GL\_NVX\_query\_resource extension, but the
+own resource usage using the GL\_NV\_query\_resource extension, but the
 nvidia-query-resource-opengl tool allows users to perform resource queries
 externally, against unmodified OpenGL applications.
 
@@ -14,11 +14,11 @@ Requirements
 ------------
 
 * A Windows, Linux, Solaris, or FreeBSD system with an NVIDIA GPU, running a
-  version of the NVIDIA OpenGL driver supporting the GL\_NVX\_query\_resource
-  extension. Support for this extension was introduced with the 355.xx driver
-  release. **Note that this extension is still under development and subject to
-  change, so applications developed against it, including this query resource
-  tool, may need to be updated for compatibility with future driver versions.**
+  version of the NVIDIA OpenGL driver supporting the GL\_NV\_query\_resource
+  extension. Support for this extension was introduced with the 387.xx driver
+  release. **Note: this tool operates on the released NV extension and
+  replaces an earlier tool that operated on the experimental NVX version of
+  the extension.***
 * CMake 2.6 or later, and a suitable build system (e.g. Windows SDK and/or
   Microsoft Visual Studio on Windows; make and cc/gcc on Unix-like systems)
   that is supported by the CMake generators on the target platform. (Not needed
@@ -63,16 +63,16 @@ Usage
 
 You can query an application's OpenGL resource usage by executing the command:
 
-    nvidia-query-resource-opengl -p <pid> [-qt <query_type>]
+    nvidia-query-resource-opengl -p <pid>
 
 * pid: the process ID of the target OpenGL application of the query
-* query\_type: this may be 'summary' or 'detailed'. The default is 'summary'.
-  + summary: reports a summary, per device, of allocated video and system
-     memory, the total amount of memory in use by the the driver, and the
-     total amount of allocated but unused memory.
-  + detailed: includes the summary information, and additionally reports
-     separate allocation amounts for various object types. The current set
-     of reported object types includes:
+  
+The tool reports a summary, per device, of allocated video memory, the total
+amount of memory in use by the the driver, and the total amount of allocated
+but unused memory.
+
+In addition a more detailed per object memory usage is reported. The current
+set of reported object types includes:
        - SYSTEM RESERVED - driver allocated memory
        - TEXTURE - memory in use by 1D/2D/3D textures
        - RENDERBUFFER - render buffer memory

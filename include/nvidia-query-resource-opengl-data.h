@@ -25,72 +25,42 @@
 
 // Data types for interpreting data returned by the queryResource extension
 
-#define NVQR_MIN_DATA_FORMAT_VERSION 1
-#define NVQR_MAX_DATA_FORMAT_VERSION 1
-#define NVQR_VERSIONED_IDENT(IDENT, VERSION) IDENT ## _v ## VERSION
-#define NVQR_VERSION_TYPEDEF(TYPE, VERSION) \
-    typedef NVQR_VERSIONED_IDENT(TYPE, VERSION) TYPE
+#define NVQR_DATA_FORMAT_VERSION    2
+#define NVQR_MAX_DATA_BUFFER_LEN    1024
 
 typedef int NVQRQueryData_t;
 
-typedef struct NVQRQueryDetailedInfoRec_v1 {
-    NVQRQueryData_t memType;
-    NVQRQueryData_t objectType;
-    NVQRQueryData_t memUsedkiB;
-    NVQRQueryData_t numAllocs;
-} NVQRQueryDetailedInfo_v1;
-NVQR_VERSION_TYPEDEF(NVQRQueryDetailedInfo, NVQR_MAX_DATA_FORMAT_VERSION);
-
-typedef struct NVQRQuerySummaryInfoRec_v1 {
-    NVQRQueryData_t totalAllocs;
-    NVQRQueryData_t vidMemUsedkiB;
-    NVQRQueryData_t sysMemUsedkiB;
-    NVQRQueryData_t vidMemFreekiB;
-    NVQRQueryData_t sysMemFreekiB;
-} NVQRQuerySummaryInfo_v1;
-NVQR_VERSION_TYPEDEF(NVQRQuerySummaryInfo, NVQR_MAX_DATA_FORMAT_VERSION);
-
-typedef struct NVQRQueryDeviceInfoRec_v1 {
-    NVQRQuerySummaryInfo_v1 summary;
-    NVQRQueryData_t numDetailedBlocks;
-    NVQRQueryDetailedInfo_v1 detailed[];
-} NVQRQueryDeviceInfo_v1;
-NVQR_VERSION_TYPEDEF(NVQRQueryDeviceInfo, NVQR_MAX_DATA_FORMAT_VERSION);
-
-typedef struct NVQRQueryDataHeaderRec_v1 {
+typedef struct NVQRQueryDataHeaderRec {
+    NVQRQueryData_t headerBlkSize;
     NVQRQueryData_t version;
     NVQRQueryData_t numDevices;
-} NVQRQueryDataHeader_v1;
-NVQR_VERSION_TYPEDEF(NVQRQueryDataHeader, NVQR_MAX_DATA_FORMAT_VERSION);
+} NVQRQueryDataHeader;
 
-#define NVQR_MAX_DEVICES 16
-#define NVQR_MAX_DETAILED_INFOS 8
-#define NVQR_MAX_DATA_BUFFER_LEN ( \
-    ( \
-        sizeof(NVQRQueryDataHeader) + ( \
-            NVQR_MAX_DEVICES * ( \
-                sizeof(NVQRQueryDeviceInfo) + \
-                NVQR_MAX_DETAILED_INFOS * sizeof(NVQRQueryDetailedInfo) \
-            ) \
-        ) \
-    ) / sizeof(NVQRQueryData_t) \
-)
+typedef struct NVQRQueryDeviceInfoRec {
+    NVQRQueryData_t deviceBlkSize;
+    NVQRQueryData_t summaryBlkSize;
+    NVQRQueryData_t totalAllocs;
+    NVQRQueryData_t vidMemUsedkiB;
+    NVQRQueryData_t vidMemFreekiB;
+    NVQRQueryData_t numDetailBlocks;
+} NVQRQueryDeviceInfo;
 
-// Helper functions for extracting data from raw int array
+typedef struct NVQRQueryDetailInfoRec {
+    NVQRQueryData_t detailBlkSize;
+    NVQRQueryData_t memType;
+    NVQRQueryData_t objectType;
+    NVQRQueryData_t numAllocs;
+    NVQRQueryData_t memUsedkiB;
+} NVQRQueryDetailInfo;
 
-int nvqr_get_data_format_version (NVQRQueryData_t *data);
-int nvqr_get_num_devices (NVQRQueryData_t *data);
-
-// Returns a pointer to a DeviceInfo structure. The versioned functions
-// (e.g. nvqr_get_device_v1()) must only be used with the correct data format
-// version, and will return a pointer within the already allocated data
-// array passed into the function. This pointer must not be freed.
-// The unversioned nvqr_get_device() function will return a pointer to a *newly
-// allocated* structure of the highest type version supported by this header,
-// and copy data from the source array into this structure. The caller is
-//responsible for freeing the memory allocated by nvqr_get_device().
-
-NVQRQueryDeviceInfo_v1 *nvqr_get_device_v1(NVQRQueryData_t *data, int device);
-NVQRQueryDeviceInfo *nvqr_get_device(NVQRQueryData_t *data, int device);
+typedef struct NVQRTagBlockRec {
+    NVQRQueryData_t tagBlkSize;
+    NVQRQueryData_t tagId;
+    NVQRQueryData_t deviceId;
+    NVQRQueryData_t numAllocs;
+    NVQRQueryData_t vidmemUsedkiB;
+    NVQRQueryData_t tagLength;
+    char tag[4];
+} NVQRTagBlock;
 
 #endif
